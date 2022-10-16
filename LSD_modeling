@@ -1,0 +1,91 @@
+clear;
+[x,fval]=fminsearch(@calc_sums,[1 1 1]) % find the minimum using [1 1 1] as a starting point
+Time = [0.0833, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0]; %hrs
+P_conc = [11.1, 7.4, 6.3, 6.9, 5.0, 3.1, 0.8;
+          10.6, 7.6, 7.0, 4.8, 2.8, 2.5 2.0;
+          8.7, 6.7, 5.9, 4.3, 4.4, NaN, 0.3; 
+          10.9, 8.2, 7.9, 6.6, 5.3, 3.8, 0.3;
+          6.4, 6.3, 5.1, 4.3, 3.4, 1.9, 0.7];
+P_score = [73, 60, 35, 50, 48, 73, 97;
+           72, 55, 74, 81, 79, 89, 106;
+           60, 23, 6,  0,  27, 69, 81;
+           60, 20, 3,  5,  3,  20, 62;
+           78, 65, 27, 30, 35, 43, 51];
+clf; hold on;
+plot(Time, P_conc(1,:), 'r-x')
+plot(Time, P_conc(2,:), 'g-x')
+plot(Time, P_conc(3,:), 'b-x')
+plot(Time, P_conc(4,:), 'k-x')
+plot(Time, P_conc(5,:), 'c-x')
+a = x(1);
+b = x(2);
+e = x(3);
+t = linspace(0,8,1000);
+minimized_solution = solvelsd(a, b, e, t);
+plot(t,minimized_solution(1,:),'m-','LineWidth',3)
+legend("Subject 1","Subject 2","Subject 3","Subject 4","Subject 5","Calculated")
+xlabel("Time (hrs)")
+ylabel("Concentraion of LSD in Plasma(ng/mL)")
+hold off;
+
+hold on;
+
+plot(Time, P_score(1,:), "Color", "#0072BD")
+plot(Time, P_score(2,:), "Color", "#D95319")
+plot(Time, P_score(3,:), "Color", "#7E2F8E")
+plot(Time, P_score(4,:), "Color", "#77AC30")
+plot(Time, P_score(5,:), 'c')
+ylabel("Performance Score(%)")
+yyaxis right
+plot(t,minimized_solution(2,:),'LineWidth',3)
+legend("Subject 1 Score","Subject 2 Score","Subject 3 Score","Subject 4 Score","Subject 5 Score","Calculated Tissue Concentration");
+xlabel("Time (hrs)");
+ylabel("Concentraion of LSD in Tissue(ng/mL)"); 
+
+function solution = solvelsd(a,b,e,t)
+% Finding solution to system of odes using given a,b,e
+A = [(-b -e) 0.706*a; 1.407*b -a]; % putting coefficients of odes in matrix
+[v,d] = eig(A); % v has vectors, d has values
+initial = [12.27; 0]; % values of lsd concentation in plasma and tissue at t=0
+constants = inv(v)*initial; % finding constants in solution equation
+solution = constants(1).*exp(d(1,1)*t).*v(:,1) + constants(2).*exp(d(2,2)*t).*v(:,2);
+end
+
+function s = calc_sums(x)
+% grab the values from the input vector
+a = x(1);
+b = x(2);
+e = x(3);
+% Returns the sum of the residual for a given ka, kb, and ke value
+% Arguments:
+% a : ka
+% b : kb
+% e : ke
+% Returns:
+% s : sum of (equated values - data) squared
+
+% Given data
+% Times
+Time = [0.0833, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0]; %hrs
+% Concentration of LSD in plasma for each patient (rows) during each
+% time(columns):
+P_conc = [11.1, 7.4, 6.3, 6.9, 5.0, 3.1, 0.8;
+         10.6, 7.6, 7.0, 4.8, 2.8, 2.5 2.0;
+         8.7, 6.7, 5.9, 4.3, 4.4, 3, 0.3; % 3 should be NaN
+         10.9, 8.2, 7.9, 6.6, 5.3, 3.8, 0.3;
+         6.4, 6.3, 5.1, 4.3, 3.4, 1.9, 0.7;];
+
+
+% Defining concentrations at each measured time using solution equation
+solution = solvelsd(a,b,e,Time);
+
+% finding residual sum
+s = 0;
+for j = 1:5 %number of patients
+   for k = 1:7 %number of measured times
+       s = s + (solution(1,k) - P_conc(j,k))^2;
+   end
+end
+s = s -(solution(1,6) - P_conc(3,6))^2;
+end
+
